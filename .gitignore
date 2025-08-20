@@ -1,0 +1,9 @@
+# dependencies
+/node_modules
+
+# local env files
+/configs
+.env
+
+# template
+/x_template
