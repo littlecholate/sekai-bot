@@ -6,12 +6,14 @@ A Node.js-based bot project with modular structure, general configuration utilit
 
 ## 📂 File Structure
 
-├── src/ # Main source code
-│ ├── index.js # Entry point of the bot
-│ ├── utils/ # General utilities
-│ │ └── config.js # Centralized config handler
-│ └── modules/ # Extendable bot modules
+├── bot.js # Entry point of the bot
+├── deploy-commands.js # Deploy slash command to discord base on server channel id
 │
+├── utils/ # General utilities
+│ ├── config.js # Centralized config handler
+│ └── handleXXX.js  
+│
+├── .env # Store local CLIENT_ID, SERVER_ID and DISCORD_TOKEN
 ├── package.json # Project dependencies & scripts
-├── .gitignore # Ignored files for GitHub
-└── README.md # Project documentation
+├── .gitignore
+└── README.md
