@@ -1,14 +1,22 @@
 import { config } from 'dotenv';
-import { Client, Events, Collection, GatewayIntentBits, MessageFlags } from 'discord.js';
+import { Client, Events, Collection, GatewayIntentBits, Partials, MessageFlags } from 'discord.js';
 import fs from 'node:fs';
 import { loadConfig } from './utils/config.js';
 import { handleHornBot } from './utils/handleHornBot.js';
+import { handleTranslate } from './utils/handleTranslate.js';
 
 config(); // read variables in .env
 
 // Discord client instance setup
 const client = new Client({
-    intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent],
+    intents: [
+        GatewayIntentBits.Guilds,
+        GatewayIntentBits.GuildMessages,
+        GatewayIntentBits.MessageContent,
+        GatewayIntentBits.GuildMessageReactions,
+        GatewayIntentBits.GuildMembers,
+    ],
+    partials: [Partials.Message, Partials.Channel, Partials.Reaction, Partials.User, Partials.GuildMember],
 });
 client.commands = new Collection();
 
@@ -25,8 +33,8 @@ client.once(Events.ClientReady, () => {
 });
 
 // ===== Message Handlers =====
-client.on('messageCreate', async (message) => {
-    if (message.author.bot) return; // avoid loops
+client.on('messageCreate', async (message, user) => {
+    if (message.author.bot && message.author.id !== '1116946826877227068') return; // avoid loops
 
     const guildId = message.guild?.id;
     if (!guildId) return; // skip direct messages
@@ -35,7 +43,7 @@ client.on('messageCreate', async (message) => {
 
     // Check if current channel is in listenChannels
     if (config['horn_bot'].listenChannels.includes(message.channel.id)) {
-        const response = await handleHornBot(message.content);
+        const response = await handleHornBot(message.content, user);
         for (const targetChannelId of config['horn_bot'].replyChannels) {
             const targetChannel = client.channels.cache.get(targetChannelId);
             targetChannel.send(response);
@@ -53,6 +61,16 @@ client.on(Events.InteractionCreate, async (interaction) => {
         }
     } catch (error) {
         console.error(`❌ Error handling interaction:`, error);
+    }
+});
+
+// ===== Message Reaction Add =====
+client.on('messageReactionAdd', async (reaction, user) => {
+    if (user.bot) return;
+
+    // Trigger on the configured emoji
+    if (reaction.emoji.id === process.env.TRANSLATE_TRIGGER_EMOJI_ID) {
+        await handleTranslate(reaction, user);
     }
 });
 

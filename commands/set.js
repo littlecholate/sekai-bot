@@ -23,7 +23,7 @@ export const data = new SlashCommandBuilder()
             .setName('util')
             .setDescription('Name of utils')
             .setRequired(true)
-            .addChoices({ name: 'for_HornBot', value: 'horn_bot' }, { name: 'for_translation', value: 'translation' })
+            .addChoices({ name: 'for_HornBot', value: 'horn_bot' })
     );
 
 // Setup command set execute function
