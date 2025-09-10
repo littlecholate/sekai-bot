@@ -41,22 +41,27 @@ export async function execute(interaction) {
     // Track users who opt out by reacting
     const optedOut = new Set();
 
-    // Prepare 3 rounds, 5 minutes apart
+    // Prepare 3 rounds, 3 minutes apart
     const TOTAL_ROUNDS = 3;
-    const INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
+    const INTERVAL_MS = 3 * 60 * 1000; // 5 minutes
 
     // Helper to render the mention line using remaining IDs
     const renderLine = () => {
         const remaining = [...ids].filter((id) => !optedOut.has(id));
         return {
             remaining,
-            text: '嗨 ' + remaining.map((id) => `<@${id}>`).join(', ') + '請餵我吃表情符號不然五分鐘後我會再騷擾你',
+            text:
+                '嗨 ' +
+                remaining.map((id) => `<@${id}>`).join(', ') +
+                '\n\nお越しいただき、お手伝いありがとうございます。次の交代でお手伝いを開始していただきます。準備ができましたら、絵文字をクリックして完了をお知らせください。' +
+                '\n感謝您前來幫忙，您將於下一梯次開始協助，請點擊表情符號表示準備完成' +
+                '\nThank you for coming to assist. You will begin your assistance with the next rotation. Please click the emoji to confirm you are ready.',
         };
     };
 
     // Send status to the invoker (ephemeral) so they know it started
     await interaction.reply({
-        content: `Starting calls for ${ids.size} user(s) every 5 minutes, for 3 times`,
+        content: `Starting calls for ${ids.size} user(s) every 3 minutes, for 3 times`,
         flags: MessageFlags.Ephemeral,
     });
 

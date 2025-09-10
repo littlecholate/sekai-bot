@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import { loadConfig } from './utils/config.js';
 import { handleHornBot } from './utils/handleHornBot.js';
 import { handleTranslate } from './utils/handleTranslate.js';
+import { startSchedulers } from './utils/scheduler.js';
 
 config(); // read variables in .env
 
@@ -30,6 +31,8 @@ for (const file of commandFiles) {
 // When the client is ready to be online, run this code (only once).
 client.once(Events.ClientReady, () => {
     console.log(`Ready! Logged in as ${client.user.tag}`);
+    // only called once when the bot successfully connects, preventing multiple instances of your cron jobs
+    startSchedulers(client);
 });
 
 // ===== Message Handlers =====
