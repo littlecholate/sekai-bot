@@ -1,6 +1,6 @@
 import { franc } from 'franc';
 
-export function handleHornBot(content) {
+export function handleHornBot(content, user) {
     if (content.startsWith(';')) return; // block messages starting with ";"
     // console.log(content);
 
@@ -17,12 +17,15 @@ export function handleHornBot(content) {
     // minLength tells franc the minimum number of characters needed to try detection.
     const langCode = franc(cleanedText, { minLength: 1 }); // detects ISO 639-3
 
+    let prefix = ';sv en-US ';
+
     // Map franc code to our prefixes
-    if (langCode === 'cmn') prefix = ';sv zh-CN '; // Chinese
-    else if (langCode === 'eng') prefix = ';sv en-US '; // English
-    else if (langCode === 'jpn') prefix = ';sv ja '; // Japanese
-    else prefix = ';sv zh-CN '; // default
+    if (langCode === 'cmn') prefix = ';sv zh-CN ' + user.globalName + ' '; // Chinese
+    else if (langCode === 'eng') prefix = ';sv en-US ' + user.globalName + ' '; // English
+    else if (langCode === 'jpn') prefix = ';sv ja ' + user.globalName + ' '; // Japanese
+
+    // console.log(user); // use user.globalName
 
     // Send the message to the other channel with the ;sv prefix
-    return prefix + content.username + ' ' + cleanedText;
+    return prefix + cleanedText;
 }

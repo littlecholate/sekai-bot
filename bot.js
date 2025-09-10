@@ -36,7 +36,7 @@ client.once(Events.ClientReady, () => {
 });
 
 // ===== Message Handlers =====
-client.on('messageCreate', async (message, user) => {
+client.on('messageCreate', async (message) => {
     if (message.author.bot && message.author.id !== '1116946826877227068') return; // avoid loops
 
     const guildId = message.guild?.id;
@@ -46,7 +46,8 @@ client.on('messageCreate', async (message, user) => {
 
     // Check if current channel is in listenChannels
     if (config['horn_bot'].listenChannels.includes(message.channel.id)) {
-        const response = await handleHornBot(message.content, user);
+        const response = await handleHornBot(message.content, message.author);
+        if (!response) return;
         for (const targetChannelId of config['horn_bot'].replyChannels) {
             const targetChannel = client.channels.cache.get(targetChannelId);
             targetChannel.send(response);
