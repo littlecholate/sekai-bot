@@ -1,5 +1,6 @@
-import { SlashCommandBuilder } from 'discord.js';
-import { loadConfig, saveConfig } from '../utils/config.js';
+import { SlashCommandBuilder, ChannelType } from 'discord.js';
+import { joinVoiceChannel, getVoiceConnection, createAudioPlayer } from '@discordjs/voice';
+import { loadConfig, saveConfig, players } from '../utils/config.js';
 
 // Setup command set data
 export const data = new SlashCommandBuilder()
@@ -19,11 +20,7 @@ export const data = new SlashCommandBuilder()
     )
     .addChannelOption((opt) => opt.setName('channel').setDescription('Channel to do action').setRequired(true))
     .addStringOption((opt) =>
-        opt
-            .setName('util')
-            .setDescription('Name of utils')
-            .setRequired(true)
-            .addChoices({ name: 'for_HornBot', value: 'horn_bot' })
+        opt.setName('util').setDescription('Name of utils').setRequired(true).addChoices({ name: 'for_tts', value: 'tts' })
     );
 
 // Setup command set execute function
@@ -58,10 +55,53 @@ export async function execute(interaction) {
                 config[util].replyChannels.push(channelId);
             }
             replyMsg = `✅ Bot replying channel for **${util}** is set to <#${channelId}>`;
+
+            // Enter voice channel if it is set
+            try {
+                if (channel.type === ChannelType.GuildVoice) {
+                    // Check if a connection already exists
+                    if (getVoiceConnection(guildId)) return;
+
+                    // Join the voice channel
+                    const connection = joinVoiceChannel({
+                        channelId: channelId,
+                        guildId: guildId,
+                        adapterCreator: channel.guild.voiceAdapterCreator,
+                        selfDeaf: true, // bot CANNOT hear
+                        selfMute: false, // bot can still speak
+                    });
+
+                    // Create the audio player and store it
+                    const player = createAudioPlayer();
+                    players.set(guildId, player);
+                    connection.subscribe(player);
+                }
+            } catch (err) {
+                console.error(`Failed to connect to voice channel ${channelId}`, err);
+            }
             break;
         case 'reply_end':
             config[util].replyChannels = config[util].replyChannels.filter((id) => id !== channelId);
             replyMsg = `✅ Bot replying channel for **${util}** removed`;
+            // Leave voice channel if it is set
+            try {
+                if (channel.type === ChannelType.GuildVoice) {
+                    // Check if a connection already exists
+                    const connection = getVoiceConnection(guildId);
+                    const player = players.get(guildId);
+
+                    // Unsubscribe the player to prevent new audio from being played
+                    if (player) {
+                        player.stop();
+                        players.delete(guildId);
+                    }
+
+                    // Destroy the voice connection to make the bot leave
+                    connection.destroy();
+                }
+            } catch (err) {
+                console.error(`Failed to connect to voice channel ${channelId}`, err);
+            }
             break;
         default:
             replyMsg = '⚠️ Unknown action';

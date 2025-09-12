@@ -1,10 +1,11 @@
 import { config } from 'dotenv';
-import { Client, Events, Collection, GatewayIntentBits, Partials, MessageFlags } from 'discord.js';
+import { Client, Events, Collection, GatewayIntentBits, Partials, MessageFlags, ChannelType } from 'discord.js';
 import fs from 'node:fs';
+import { franc } from 'franc';
 import { loadConfig } from './utils/config.js';
-import { handleHornBot } from './utils/handleHornBot.js';
 import { handleTranslate } from './utils/handleTranslate.js';
 import { handleVoiceVox } from './utils/handleVoiceVox.js';
+import { handleTextPreProcess } from './utils/handleTextPreProcess.js';
 import { startSchedulers } from './utils/scheduler.js';
 
 config(); // read variables in .env
@@ -41,27 +42,35 @@ client.once(Events.ClientReady, () => {
 client.on('messageCreate', async (message) => {
     if (message.author.bot && message.author.id !== '1116946826877227068') return; // avoid loops
 
-    const guildId = message.guild?.id;
+    const guildId = message.guild?.id; // Guild ID = unique identifier of a Discord server
     if (!guildId) return; // skip direct messages
 
-    const config = loadConfig(guildId);
-
     const username = message.member.nickname || message.member.user.globalName;
+    const preText = await handleTextPreProcess(message.content);
+    if (!preText) return;
 
     // Check if current channel is in listenChannels
-    if (config['horn_bot'].listenChannels.includes(message.channel.id)) {
-        const response = await handleHornBot(message.content, username);
-        if (!response) return;
+    const config = loadConfig(guildId);
 
-        // Check if need to use voicevox to speak
-        if (response.startsWith('!speak')) {
-            await handleVoiceVox(response.slice('!speak'.length).trim());
-        } else {
-            for (const targetChannelId of config['horn_bot'].replyChannels) {
+    // Check if message is created in tts listening channels
+    if (config['tts'].listenChannels.includes(message.channel.id)) {
+        if (preText.startsWith(';')) return; // block messages starting with ";"
+
+        // minLength tells franc the minimum number of characters needed to try detection.
+        const langCode = franc(preText, { minLength: 1 }); // detects ISO 639-3
+
+        // Map franc code to our prefixes
+        if (langCode === 'cmn') {
+            // Send the message to the other channel with the ;sv prefix
+            const response = ';sv zh-CN ' + username + ' 說 ' + preText; // Chinese
+            for (const targetChannelId of config['tts'].replyChannels) {
                 const targetChannel = client.channels.cache.get(targetChannelId);
-                targetChannel.send(response);
+                if (targetChannel.type !== ChannelType.GuildVoice) {
+                    targetChannel.send(response);
+                }
             }
-        }
+        } else if (langCode === 'jpn') await handleVoiceVox(username + ' ' + preText + ' と言った', guildId); // Japanese
+        else await handleVoiceVox(username + ' say ' + preText, guildId); // English or others
     }
 });
 

@@ -1,12 +1,11 @@
-import { joinVoiceChannel, createAudioPlayer, createAudioResource, StreamType } from '@discordjs/voice';
+import { createAudioResource, StreamType, getVoiceConnection } from '@discordjs/voice';
+import { players } from '../utils/config.js';
 
 // A single function to handle the entire "speak" command
-export async function handleVoiceVox(message) {
-    const voiceChannel = await client.channels.fetch('1415758733912571984');
-
+export async function handleVoiceVox(message, guildId) {
     try {
         // Step 1: Query the VOICEVOX API to get the audio query JSON
-        const queryUrl = `http://127.0.0.1:50021/audio_query?speaker=89&text=${encodeURIComponent(textToSpeak)}`;
+        const queryUrl = `http://127.0.0.1:50021/audio_query?speaker=89&text=${encodeURIComponent(message)}`;
         const queryResponse = await fetch(queryUrl, { method: 'POST' });
 
         if (!queryResponse.ok) {
@@ -28,31 +27,28 @@ export async function handleVoiceVox(message) {
             throw new Error(`Synthesis API Error: Status ${synthesisResponse.status}`);
         }
 
-        // Step 3: Connect to the voice channel and stream the audio
-        const connection = joinVoiceChannel({
-            channelId: voiceChannel.id,
-            guildId: voiceChannel.guild.id,
-            adapterCreator: voiceChannel.guild.voiceAdapterCreator,
-        });
-
-        const player = createAudioPlayer();
-        connection.subscribe(player);
-
         const audioStream = synthesisResponse.body; // Get the readable stream from the fetch response
+
+        // Step 3: Connect to the voice channel and stream the audio
+        const connection = getVoiceConnection(guildId);
+        if (!connection) {
+            console.error('Bot is not in a voice channel in this guild.');
+            return;
+        }
+
+        // Retrieve the existing player for this guild
+        const player = players.get(guildId);
+        if (!player) {
+            console.error('Audio player not found for this guild.');
+            return;
+        }
+
         const resource = createAudioResource(audioStream, {
             inputType: StreamType.Arbitrary,
         });
 
         player.play(resource);
-
-        player.on('stateChange', (oldState, newState) => {
-            if (newState.status === 'idle') {
-                // You could disconnect here
-                // connection.destroy();
-            }
-        });
     } catch (error) {
-        console.error('Error during voice command:', error);
-        message.reply('An error occurred while processing your request.');
+        console.error('Error during voice command: ', error);
     }
 }

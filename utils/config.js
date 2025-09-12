@@ -3,6 +3,9 @@ import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 
 const configs = {}; // in-memory config cache
 
+// A map to store the audio players, keyed by guild ID
+export const players = new Map();
+
 // load the config files to in-memory cache at the beginning
 export function loadConfig(guildId) {
     if (configs[guildId]) return configs[guildId];
