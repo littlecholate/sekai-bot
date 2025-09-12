@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import { loadConfig } from './utils/config.js';
 import { handleHornBot } from './utils/handleHornBot.js';
 import { handleTranslate } from './utils/handleTranslate.js';
+import { handleVoiceVox } from './utils/handleVoiceVox.js';
 import { startSchedulers } from './utils/scheduler.js';
 
 config(); // read variables in .env
@@ -16,6 +17,7 @@ const client = new Client({
         GatewayIntentBits.MessageContent,
         GatewayIntentBits.GuildMessageReactions,
         GatewayIntentBits.GuildMembers,
+        GatewayIntentBits.GuildVoiceStates,
     ],
     partials: [Partials.Message, Partials.Channel, Partials.Reaction, Partials.User, Partials.GuildMember],
 });
@@ -32,7 +34,7 @@ for (const file of commandFiles) {
 client.once(Events.ClientReady, () => {
     console.log(`Ready! Logged in as ${client.user.tag}`);
     // only called once when the bot successfully connects, preventing multiple instances of your cron jobs
-    startSchedulers(client);
+    // startSchedulers(client);
 });
 
 // ===== Message Handlers =====
@@ -44,13 +46,21 @@ client.on('messageCreate', async (message) => {
 
     const config = loadConfig(guildId);
 
+    const username = message.member.nickname || message.member.user.globalName;
+
     // Check if current channel is in listenChannels
     if (config['horn_bot'].listenChannels.includes(message.channel.id)) {
-        const response = await handleHornBot(message.content, message.author);
+        const response = await handleHornBot(message.content, username);
         if (!response) return;
-        for (const targetChannelId of config['horn_bot'].replyChannels) {
-            const targetChannel = client.channels.cache.get(targetChannelId);
-            targetChannel.send(response);
+
+        // Check if need to use voicevox to speak
+        if (response.startsWith('!speak')) {
+            await handleVoiceVox(response.slice('!speak'.length).trim());
+        } else {
+            for (const targetChannelId of config['horn_bot'].replyChannels) {
+                const targetChannel = client.channels.cache.get(targetChannelId);
+                targetChannel.send(response);
+            }
         }
     }
 });
