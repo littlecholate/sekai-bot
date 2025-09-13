@@ -1,5 +1,6 @@
 import { config } from 'dotenv';
 import { GoogleGenAI } from '@google/genai';
+import { handleTextPreProcess } from './handleTextPreProcess';
 
 config(); // read variables in .env
 
@@ -33,18 +34,14 @@ export async function handleTranslate(reaction, user) {
         }
 
         // Extract message content to translate.
-        let cleanedText = msg.content.replace(/[\u{1F300}-\u{1FAFF}\u{1F000}-\u{1F02F}\u{2600}-\u{27BF}]/gu, '');
-        cleanedText = cleanedText.replace(/<a?:\w+:\d+>/g, ''); // remove custom Discord emojis <:name:id> or <a:name:id>
-        cleanedText = cleanedText.replace(/:\w+:/g, ''); // remove shorthand :name: (if you also want to strip those)
-        cleanedText = cleanedText.replace(/(https?:\/\/[^\s)]+)|(<#[0-9]+>)|(<@&?[0-9]+>)/g, '');
-        cleanedText = cleanedText.trim();
+        const cleanedText = await handleTextPreProcess(msg.content);
         if (!cleanedText) return;
 
         const ai = new GoogleGenAI(process.env.GEMINI_API_KEY);
 
-        const prompt = `Translate following text into ${targetLang}.
-            The input text might be in Chinese, English, or Japanese.
-            ONLY provide the translated plain text and nothing else. 
+        const prompt = `Translate text into ${targetLang}.
+            The input might be in Chinese, English, or Japanese.
+            ONLY provide the translated text, nothing else. 
             Text to translate: "${cleanedText}"
         `;
         // Send the prompt to the Gemini API

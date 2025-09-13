@@ -40,22 +40,21 @@ client.once(Events.ClientReady, () => {
 
 // ===== Message Handlers =====
 client.on('messageCreate', async (message) => {
-    if (message.author.bot && message.author.id !== '1116946826877227068') return; // avoid loops
+    if (message.author.bot && message.author.id !== '1116946826877227068') return; // avoid loops but open to tamako
 
     const guildId = message.guild?.id; // Guild ID = unique identifier of a Discord server
     if (!guildId) return; // skip direct messages
-
-    const username = message.member.nickname || message.member.user.globalName;
-    const preText = await handleTextPreProcess(message.content);
-    if (!preText) return;
 
     // Check if current channel is in listenChannels
     const config = loadConfig(guildId);
 
     // Check if message is created in tts listening channels
     if (config['tts'].listenChannels.includes(message.channel.id)) {
-        if (preText.startsWith(';')) return; // block messages starting with ";"
+        if (message.channel.startsWith(';')) return; // block messages starting with ";"
 
+        const username = message.member.nickname || message.member.user.globalName;
+        const preText = await handleTextPreProcess(message.content);
+        if (!preText) return;
         // minLength tells franc the minimum number of characters needed to try detection.
         const langCode = franc(preText, { minLength: 1 }); // detects ISO 639-3
 
